@@ -235,12 +235,7 @@ const LoadingScreen = ({ onComplete }) => {
             cursor: 'pointer',
             boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
             transition: 'background 0.2s, color 0.2s, transform 0.1s',
-            outline: 'none',
-            active: {
-              background: '#e6e6e6',
-              color: '#1976d2',
-              transform: 'translateY(2px) scale(0.98)'
-            }
+            outline: 'none'
           }}
           onMouseDown={e => e.currentTarget.style.transform = 'translateY(2px) scale(0.98)'}
           onMouseUp={e => e.currentTarget.style.transform = ''}
