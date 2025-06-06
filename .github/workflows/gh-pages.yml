@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
+      - name: Copy parquet_wasm_bg.wasm to public
+        run: cp node_modules/parquet-wasm/esm/parquet_wasm_bg.wasm public/
+
       - name: Build
         run: yarn build
 
