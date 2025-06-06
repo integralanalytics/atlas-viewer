@@ -53,6 +53,9 @@ function App() {
         // Configure loaders first (async operation)
         console.log('Configuring Kepler.gl loaders...');
         configuredLoaders = await configureLoaders();
+        if (!configuredLoaders) {
+          throw new Error('Failed to configure loaders. Please check the configuration.');
+        }
         
         // Simulate initialization delay for branding effect
         await new Promise(resolve => setTimeout(resolve, 1000));
