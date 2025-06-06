@@ -1,7 +1,10 @@
 import { colors } from './colors.js';
 
-// Custom Integral Analytics theme based on the brand colors
+// Custom Integral Analytics theme for Kepler.gl
+// This theme follows Kepler.gl's theming structure while applying our brand colors
 export const integralAnalyticsTheme = {
+  // Theme identification
+  themeName: 'integralAnalytics',
   // Main Colors
   primaryColor: colors.primaryDeepBlue, // Changed from primaryBrightBlue
   secondaryColor: colors.primaryBrightBlue, // Changed from secondaryRoyalBlue
