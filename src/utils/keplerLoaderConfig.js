@@ -1,62 +1,49 @@
-// Custom loader configuration for Kepler.gl
-import { registerLoaders } from '@loaders.gl/core';
-import { ParquetLoader } from '@loaders.gl/parquet';
-import { ArrowLoader } from '@loaders.gl/arrow';
-import { JSONLoader } from '@loaders.gl/json';
-import { CSVLoader } from '@loaders.gl/csv';
+// Configure loaders.gl options for Kepler.gl's built-in Parquet support
+import { setLoaderOptions } from '@loaders.gl/core';
 
-// Enhanced loader registration with proper options
-export const configureKeplerLoaders = () => {
-  const loaders = [
-    {
-      ...CSVLoader,
-      options: {
-        csv: {
-          delimiter: ',',
-          header: true,
-          skipEmptyLines: true,
-          transform: (value, field) => {
-            // Handle numeric fields
-            if (field === 'lat' || field === 'lng' || field === 'latitude' || field === 'longitude') {
-              return parseFloat(value) || 0;
-            }
-            return value;
-          }
-        }
+/**
+ * Initialize parquet-wasm and configure loaders.gl for Kepler.gl's built-in Parquet loader
+ * This properly initializes the WASM module before it's used by @loaders.gl/parquet
+ */
+export const configureLoaders = async () => {
+  try {
+    console.log('Initializing parquet-wasm module...');
+    
+    // Import and initialize parquet-wasm - this is the critical step that was missing!
+    const wasmModule = await import('parquet-wasm');
+    
+    // Initialize the WASM module to populate the wasm variable
+    await wasmModule.default();
+    
+    console.log('Parquet WASM module initialized successfully');
+    
+    // Use local WASM file to avoid CORS and CDN issues
+    const localWasmUrl = '/parquet_wasm_bg.wasm';
+    
+    try {
+      console.log('Testing local WASM file:', localWasmUrl);
+      const response = await fetch(localWasmUrl);
+      if (!response.ok) {
+        throw new Error(`Local WASM file not found: ${response.status} ${response.statusText}`);
       }
-    },
-    {
-      ...JSONLoader,
-      options: {
-        json: {
-          jsonpath: '$'
-        }
+      console.log('Local WASM file found successfully');
+    } catch (error) {
+      console.error('Failed to load local WASM file:', error);
+      throw new Error('Local WASM file is not accessible. Please ensure parquet_wasm_bg.wasm is in the public folder.');
+    }    // Configure global loader options for all Parquet loaders
+    setLoaderOptions({
+      parquet: {
+        wasmUrl: localWasmUrl
       }
-    },
-    {
-      ...ParquetLoader,
-      options: {
-        parquet: {
-          preserveTypedArrays: true
-        }
-      }
-    },
-    {
-      ...ArrowLoader,
-      options: {
-        arrow: {
-          preserveTypedArrays: true
-        }
-      }
-    }
-  ];
-
-  registerLoaders(loaders);
-  
-  console.log('Kepler.gl loaders configured:', loaders.map(l => l.name || l.id));
-  
-  return loaders;
+    });
+    
+    console.log('Kepler.gl loaders configured successfully with initialized WASM module');
+    return true;
+  } catch (error) {
+    console.error('Error configuring loaders:', error);
+    return false;
+  }
 };
 
-// Export individual loaders for debugging
-export { ParquetLoader, ArrowLoader, JSONLoader, CSVLoader };
+// Export for easy initialization
+export default configureLoaders;

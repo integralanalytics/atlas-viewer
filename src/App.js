@@ -16,10 +16,10 @@ import CustomSidePanelHeader from './components/CustomSidePanelHeader';
 import LoadingScreen from './components/LoadingScreen';
 
 // Loaders.gl registration for Kepler.gl file import support
-import { configureKeplerLoaders } from './utils/keplerLoaderConfig';
+import { configureLoaders } from './utils/keplerLoaderConfig';
 
-// Configure loaders with enhanced options
-const configuredLoaders = configureKeplerLoaders();
+// We'll configure loaders asynchronously in useEffect
+let configuredLoaders = null;
 
 // Create Redux store
 const reducers = combineReducers({
@@ -40,13 +40,15 @@ store.subscribe(() => {
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-
   // Initialize the app with loading screen
   useEffect(() => {
     const initializeApp = async () => {
-      try {
+      try {        // Configure loaders first (async operation)
+        console.log('Configuring Kepler.gl loaders...');
+        configuredLoaders = await configureLoaders();
+        
         // Simulate initialization delay for branding effect
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Debug: Check if loaders are properly registered
         console.log('App initialized with registered loaders');
@@ -54,6 +56,7 @@ function App() {
         // Debug: Add global error handler for unhandled promises
         window.addEventListener('unhandledrejection', event => {
           console.error('Unhandled promise rejection during file loading:', event.reason);
+          // Don't prevent default - let the error show in console
         });
 
         // Debug: Add global error handler
@@ -151,11 +154,9 @@ function App() {
       </div>
     );
   }
-
   return (
     <Provider store={store}>
-      <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
-        <KeplerGl
+      <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>        <KeplerGl
           id="atlas-viewer"
           mapboxApiAccessToken={process.env.REACT_APP_MAPBOX_TOKEN || ''}
           width={window.innerWidth}
