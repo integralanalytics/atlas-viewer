@@ -37,9 +37,6 @@ const store = createStore(
 );
 
 // Debug: Monitor file loading specifically
-store.subscribe(() => {
-  // Debug logging removed for production cleanliness
-});
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
