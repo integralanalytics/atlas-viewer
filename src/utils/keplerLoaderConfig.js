@@ -16,9 +16,9 @@ export const configureLoaders = async () => {
     await wasmModule.default();
     
     console.log('Parquet WASM module initialized successfully');
-    
-    // Use local WASM file to avoid CORS and CDN issues
-    const localWasmUrl = '/parquet_wasm_bg.wasm';
+      // Use local WASM file to avoid CORS and CDN issues
+    // Use process.env.PUBLIC_URL to handle GitHub Pages subpath deployment
+    const localWasmUrl = `${process.env.PUBLIC_URL || ''}/parquet_wasm_bg.wasm`;
     
     try {
       console.log('Testing local WASM file:', localWasmUrl);
