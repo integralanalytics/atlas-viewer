@@ -1,29 +1,25 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Provider } from 'react-redux';
 import { createStore, applyMiddleware, combineReducers } from 'redux';
 import { thunk } from 'redux-thunk';
 
 // Kepler.gl imports - use scoped packages
 import KeplerGl from '@kepler.gl/components';
-import { addDataToMap } from '@kepler.gl/actions';
 import keplerGlReducer from '@kepler.gl/reducers';
+
+// Import task middleware from react-palm for file processing
+import { taskMiddleware } from 'react-palm/tasks';
 
 // Theme and components
 import { integralAnalyticsTheme } from './theme';
 import CustomSidePanelHeader from './components/CustomSidePanelHeader';
 import LoadingScreen from './components/LoadingScreen';
-import { processParquetFile, processCsvFile, processGeoJsonFile } from './utils/fileLoaders';
 
 // Loaders.gl registration for Kepler.gl file import support
-import { registerLoaders } from '@loaders.gl/core';
-import { ParquetLoader } from '@loaders.gl/parquet';
-import { ArrowLoader } from '@loaders.gl/arrow';
-import { JSONLoader } from '@loaders.gl/json';
-import { CSVLoader } from '@loaders.gl/csv';
+import { configureKeplerLoaders } from './utils/keplerLoaderConfig';
 
-// Register all relevant loaders for Kepler.gl
-registerLoaders([ParquetLoader, ArrowLoader, JSONLoader, CSVLoader]);
-console.log('Registered loaders:', [ParquetLoader, ArrowLoader, JSONLoader, CSVLoader]);
+// Configure loaders with enhanced options
+const configuredLoaders = configureKeplerLoaders();
 
 // Create Redux store
 const reducers = combineReducers({
@@ -33,8 +29,13 @@ const reducers = combineReducers({
 const store = createStore(
   reducers,
   {},
-  applyMiddleware(thunk)
+  applyMiddleware(thunk, taskMiddleware)
 );
+
+// Debug: Monitor file loading specifically
+store.subscribe(() => {
+  // Debug logging removed for production cleanliness
+});
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -47,6 +48,19 @@ function App() {
         // Simulate initialization delay for branding effect
         await new Promise(resolve => setTimeout(resolve, 2000));
         
+        // Debug: Check if loaders are properly registered
+        console.log('App initialized with registered loaders');
+        
+        // Debug: Add global error handler for unhandled promises
+        window.addEventListener('unhandledrejection', event => {
+          console.error('Unhandled promise rejection during file loading:', event.reason);
+        });
+
+        // Debug: Add global error handler
+        window.addEventListener('error', event => {
+          console.error('Global error during file loading:', event.error);
+        });
+        
         // App is ready - no automatic data loading
         setIsLoading(false);
       } catch (err) {
@@ -57,54 +71,6 @@ function App() {
     };
 
     initializeApp();
-  }, []);
-
-  const loadFile = useCallback(async (file, fileName, fileType) => {
-    try {
-      console.log(`Processing file: ${fileName} (${fileType})`);
-      let data, config;
-      
-      switch (fileType) {
-        case 'parquet':
-        case 'geoparquet':
-          ({ data, config } = await processParquetFile(file, fileName));
-          break;
-        case 'csv':
-          ({ data, config } = await processCsvFile(file, fileName));
-          break;
-        case 'geojson':
-          ({ data, config } = await processGeoJsonFile(file, fileName));
-          break;
-        default:
-          throw new Error(`Unsupported file type: ${fileType}`);
-      }
-
-      // Add data to Kepler.gl
-      store.dispatch(
-        addDataToMap({
-          datasets: {
-            info: {
-              label: fileName,
-              id: fileName.replace(/\.[^/.]+$/, "")
-            },
-            data
-          },
-          option: {
-            centerMap: true,
-            readOnly: false
-          },
-          config
-        })
-      );
-      
-      console.log(`Successfully loaded and mapped: ${fileName}`);
-    } catch (err) {
-      console.error(`Failed to load file ${fileName}:`, err);
-      // Don't set error state for sample data loading failures
-      if (!fileName.includes('coverage') && !fileName.includes('entities') && !fileName.includes('features')) {
-        setError(`Failed to load ${fileName}: ${err.message}`);
-      }
-    }
   }, []);
 
   const keplerGlConfig = useMemo(() => ({
