@@ -17,6 +17,7 @@
   ],
   "author": "Integral Analytics",
   "license": "MIT",
+  "homepage": "https://integralanalytics.github.io/atlas-viewer/",
   "dependencies": {
     "@deck.gl/aggregation-layers": "8.9.27",
     "@deck.gl/core": "8.9.27",

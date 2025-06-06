@@ -128,54 +128,42 @@ const LoadingScreen = ({ onComplete }) => {
       { text: 'Ready to explore data!', duration: 500 }
     ];
 
-    let currentStepIndex = 0;
-    let currentProgress = 0;
+    let stepIndex = 0;
+    let progressTimeout;
 
-    const updateProgress = () => {
-      if (currentStepIndex < steps.length) {
-        const step = steps[currentStepIndex];
-        setCurrentStep(step.text);
-        
-        const increment = 100 / steps.length;
-        const targetProgress = (currentStepIndex + 1) * increment;
-        
-        const progressInterval = setInterval(() => {
-          currentProgress += 2;
-          if (currentProgress >= targetProgress) {
-            currentProgress = targetProgress;
-            clearInterval(progressInterval);
-            currentStepIndex++;
-            
-            if (currentStepIndex < steps.length) {
-              setTimeout(updateProgress, 100);
-            } else {
-              setProgress(100); // Ensure 100% on finish
-              setReady(true); // Show button when ready
-            }
-          }
-          setProgress(Math.min(currentProgress, 100));
-        }, 20);
+    const runStep = (startProgress = 0) => {
+      if (stepIndex < steps.length) {
+        setCurrentStep(steps[stepIndex].text);
+        const nextProgress = ((stepIndex + 1) / steps.length) * 100;
+        const duration = steps[stepIndex].duration;
+        const startTime = Date.now();
 
-        setTimeout(() => {
-          clearInterval(progressInterval);
-          currentProgress = targetProgress;
-          setProgress(targetProgress);
-          currentStepIndex++;
-          
-          if (currentStepIndex < steps.length) {
-            setTimeout(updateProgress, 100);
+        const animate = () => {
+          const elapsed = Date.now() - startTime;
+          if (elapsed < duration) {
+            const percent = startProgress + (nextProgress - startProgress) * (elapsed / duration);
+            setProgress(percent);
+            progressTimeout = setTimeout(animate, 16);
           } else {
-            setProgress(100); // Ensure 100% on finish
-            setReady(true); // Show button when ready
+            setProgress(nextProgress);
+            stepIndex++;
+            setTimeout(() => runStep(nextProgress), 100);
           }
-        }, step.duration);
-      }
+        };
+        animate();        } else {
+          setProgress(100);
+          // Wait a bit after reaching 100% before showing the button
+          setTimeout(() => {
+            setReady(true);
+          }, 800);
+        }
     };
 
-    const startTimer = setTimeout(updateProgress, 500);
+    const startTimer = setTimeout(() => runStep(0), 500);
 
     return () => {
       clearTimeout(startTimer);
+      clearTimeout(progressTimeout);
     };
   }, [onComplete]);
 
@@ -195,7 +183,7 @@ const LoadingScreen = ({ onComplete }) => {
         <LoadingSubtitle>Powered By: kepler.gl</LoadingSubtitle>
       </LogoContainer>
       
-      <LoadingSpinner />
+      {/* <LoadingSpinner /> */}
       
       <ProgressContainer>
         <div style={{ 
