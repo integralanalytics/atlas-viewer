@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Direct WASM Test</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <h1>Direct WASM Loading Test</h1>
+    <div id="results"></div>
+    <button onclick="testWasmLoading()">Test WASM Loading</button>
+    <button onclick="testParquetLoading()">Test Parquet Loading</button>
+
+    <script>
+        const log = (message) => {
+            console.log(message);
+            document.getElementById('results').innerHTML += `<p>${message}</p>`;
+        };
+
+        async function testWasmLoading() {
+            log('Starting direct WASM test...');
+            
+            try {
+                // Test 1: Check if WASM files are accessible
+                const wasmPaths = [
+                    '/parquet_wasm_bg.wasm',
+                    '/parquet_wasm_esm_bg.wasm',
+                    '/static/wasm/parquet_wasm_bg.wasm'
+                ];
+                
+                for (const path of wasmPaths) {
+                    try {
+                        const response = await fetch(path);
+                        log(`WASM file ${path}: ${response.status} ${response.statusText}`);
+                    } catch (error) {
+                        log(`WASM file ${path}: Error - ${error.message}`);
+                    }
+                }
+                
+                // Test 2: Try loading JavaScript wrappers
+                const jsPaths = [
+                    '/parquet_wasm_esm.js',
+                    '/static/wasm/parquet_wasm.js'
+                ];
+                
+                for (const path of jsPaths) {
+                    try {
+                        const response = await fetch(path);
+                        log(`JS wrapper ${path}: ${response.status} ${response.statusText}`);
+                        
+                        if (response.ok) {
+                            const text = await response.text();
+                            log(`JS wrapper ${path} size: ${text.length} characters`);
+                        }
+                    } catch (error) {
+                        log(`JS wrapper ${path}: Error - ${error.message}`);
+                    }
+                }
+                
+            } catch (error) {
+                log(`WASM test error: ${error.message}`);
+            }
+        }
+
+        async function testParquetLoading() {
+            log('Testing Parquet loading with @loaders.gl...');
+            
+            try {
+                // Test loading the actual loader
+                const { ParquetLoader } = await import('https://unpkg.com/@loaders.gl/parquet@4.3.3/dist/es6/index.js');
+                log('ParquetLoader imported successfully');
+                
+                // Test loading a parquet file
+                const response = await fetch('/data/coverage_table.parquet');
+                if (response.ok) {
+                    log('Parquet file accessible');
+                    const arrayBuffer = await response.arrayBuffer();
+                    log(`Parquet file size: ${arrayBuffer.byteLength} bytes`);
+                    
+                    // Try to parse it (this might fail, but we want to see the error)
+                    try {
+                        const { load } = await import('https://unpkg.com/@loaders.gl/core@4.3.3/dist/es6/index.js');
+                        const data = await load(arrayBuffer, ParquetLoader);
+                        log('Parquet file parsed successfully!');
+                        log(`Data has ${data.length} rows`);
+                    } catch (parseError) {
+                        log(`Parquet parsing error: ${parseError.message}`);
+                    }
+                } else {
+                    log(`Parquet file not accessible: ${response.status}`);
+                }
+                
+            } catch (error) {
+                log(`Parquet loading error: ${error.message}`);
+            }
+        }
+
+        // Auto-run basic test when page loads
+        window.addEventListener('load', () => {
+            log('Page loaded, ready for testing');
+        });
+    </script>
+</body>
+</html>

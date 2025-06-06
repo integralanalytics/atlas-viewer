@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kepler.gl Parquet Test</title>
+    <meta charset="utf-8">
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+</head>
+<body>
+    <h1>Kepler.gl Parquet Loading Test</h1>
+    <div id="results"></div>
+    <button onclick="testKeplerParquet()">Test Kepler.gl Parquet Loading</button>
+    <button onclick="testRawParquet()">Test Raw Parquet Loading</button>
+
+    <script type="module">
+        const log = (message) => {
+            console.log(message);
+            document.getElementById('results').innerHTML += `<p>${message}</p>`;
+        };
+
+        window.testKeplerParquet = async function() {
+            log('Testing Kepler.gl parquet loading...');
+            
+            try {
+                // Import Kepler.gl processors
+                const { processDatasets } = await import('/node_modules/@kepler.gl/processors/dist/esm/index.js');
+                log('Kepler.gl processors imported successfully');
+                
+                // Fetch parquet file
+                const response = await fetch('/data/coverage_table.parquet');
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch parquet file: ${response.statusText}`);
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                const file = new File([arrayBuffer], 'coverage_table.parquet', {
+                    type: 'application/octet-stream'
+                });
+                
+                log(`File created: ${file.name}, size: ${file.size} bytes`);
+                
+                // Use Kepler.gl to process the file
+                const datasets = await processDatasets([{
+                    info: { id: 'test', label: 'Test Coverage Data' },
+                    data: file
+                }]);
+                
+                log('Parquet file processed successfully by Kepler.gl!');
+                log(`Processed ${datasets.length} datasets`);
+                
+                if (datasets.length > 0) {
+                    const dataset = datasets[0];
+                    log(`Dataset rows: ${dataset.data?.length || 'unknown'}`);
+                    log(`Dataset fields: ${dataset.info?.fields?.length || 'unknown'}`);
+                }
+                
+            } catch (error) {
+                log(`Kepler.gl parquet test error: ${error.message}`);
+                console.error('Full error:', error);
+            }
+        };
+
+        window.testRawParquet = async function() {
+            log('Testing raw parquet loading with loaders.gl...');
+            
+            try {
+                // Import from our node_modules
+                const { ParquetLoader } = await import('/node_modules/@loaders.gl/parquet/dist/esm/index.js');
+                const { load } = await import('/node_modules/@loaders.gl/core/dist/esm/index.js');
+                
+                log('Loaders.gl modules imported successfully');
+                
+                // Fetch parquet file
+                const response = await fetch('/data/coverage_table.parquet');
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch parquet file: ${response.statusText}`);
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                log(`Parquet file fetched: ${arrayBuffer.byteLength} bytes`);
+                
+                // Try to load with explicit options
+                const data = await load(arrayBuffer, ParquetLoader, {
+                    parquet: {
+                        preserveBinary: false,
+                        // Remove the problematic batchDebounceMs option
+                    }
+                });
+                
+                log('Raw parquet loading successful!');
+                log(`Data length: ${data.length}`);
+                
+                if (data.length > 0) {
+                    log(`Sample data keys: ${Object.keys(data[0] || {}).join(', ')}`);
+                }
+                
+            } catch (error) {
+                log(`Raw parquet test error: ${error.message}`);
+                console.error('Full error:', error);
+            }
+        };
+
+        // Auto-run when page loads
+        window.addEventListener('load', () => {
+            log('Kepler.gl parquet test page loaded');
+        });
+    </script>
+</body>
+</html>

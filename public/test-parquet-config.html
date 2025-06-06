@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kepler.gl ParquetLoader WASM Test</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <h1>Kepler.gl ParquetLoader WASM Configuration Test</h1>
+    <div id="results"></div>
+    <button onclick="testParquetLoaderConfig()">Test ParquetLoader Configuration</button>
+    <button onclick="testActualLoading()">Test Actual Parquet Loading</button>
+
+    <script type="module">
+        const log = (message) => {
+            console.log(message);
+            document.getElementById('results').innerHTML += `<p>${message}</p>`;
+        };
+
+        window.testParquetLoaderConfig = async function() {
+            log('Testing ParquetLoader WASM configuration...');
+            
+            try {
+                // Import ParquetLoader from Kepler.gl's dependencies
+                const { ParquetLoader } = await import('/node_modules/@kepler.gl/processors/node_modules/@loaders.gl/parquet/dist/esm/index.js');
+                log('ParquetLoader imported successfully from Kepler.gl dependencies');
+                
+                // Check what methods are available
+                const methods = Object.getOwnPropertyNames(ParquetLoader).filter(name => typeof ParquetLoader[name] === 'function');
+                log(`Available ParquetLoader methods: ${methods.join(', ')}`);
+                
+                // Test WASM path configuration
+                const wasmPaths = [
+                    '/static/wasm/parquet_wasm_bg.wasm',
+                    '/parquet_wasm_bg.wasm',
+                    '/parquet_wasm_esm_bg.wasm'
+                ];
+                
+                for (const wasmPath of wasmPaths) {
+                    try {
+                        const response = await fetch(wasmPath);
+                        if (response.ok) {
+                            log(`✓ WASM file accessible: ${wasmPath}`);
+                            
+                            // Try different configuration methods
+                            if (ParquetLoader.setOptions) {
+                                ParquetLoader.setOptions({
+                                    parquet: {
+                                        wasmUrl: wasmPath
+                                    }
+                                });
+                                log(`✓ Configured using setOptions: ${wasmPath}`);
+                            } else if (ParquetLoader.setWASMPath) {
+                                ParquetLoader.setWASMPath(wasmPath);
+                                log(`✓ Configured using setWASMPath: ${wasmPath}`);
+                            } else {
+                                log(`⚠ No configuration method found, trying default options`);
+                            }
+                            break;
+                        } else {
+                            log(`✗ WASM file not accessible: ${wasmPath} (${response.status})`);
+                        }
+                    } catch (error) {
+                        log(`✗ Error checking WASM file ${wasmPath}: ${error.message}`);
+                    }
+                }
+                
+            } catch (error) {
+                log(`ParquetLoader configuration error: ${error.message}`);
+                console.error('Full error:', error);
+            }
+        };
+
+        window.testActualLoading = async function() {
+            log('Testing actual parquet loading with configured loader...');
+            
+            try {
+                const { ParquetLoader } = await import('/node_modules/@kepler.gl/processors/node_modules/@loaders.gl/parquet/dist/esm/index.js');
+                const { load } = await import('/node_modules/@loaders.gl/core/dist/esm/index.js');
+                
+                // Fetch parquet file
+                const response = await fetch('/data/coverage_table.parquet');
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch parquet file: ${response.statusText}`);
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                log(`Parquet file fetched: ${arrayBuffer.byteLength} bytes`);
+                
+                // Try to load with the configured ParquetLoader
+                const data = await load(arrayBuffer, ParquetLoader, {
+                    parquet: {
+                        preserveBinary: false
+                        // Note: removed batchDebounceMs as it's not recognized in v4.x
+                    }
+                });
+                
+                log(`✓ Parquet loading successful! Data length: ${data.length}`);
+                
+                if (data.length > 0) {
+                    const sampleRow = data[0];
+                    log(`Sample data keys: ${Object.keys(sampleRow).join(', ')}`);
+                }
+                
+            } catch (error) {
+                log(`Parquet loading error: ${error.message}`);
+                console.error('Full error:', error);
+            }
+        };
+
+        // Auto-run configuration test when page loads
+        window.addEventListener('load', () => {
+            log('ParquetLoader WASM test page loaded');
+            testParquetLoaderConfig();
+        });
+    </script>
+</body>
+</html>

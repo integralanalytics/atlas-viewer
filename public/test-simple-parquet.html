@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple ParquetLoader Test</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <h1>Simple ParquetLoader Test</h1>
+    <div id="results"></div>
+    <button onclick="testImports()">Test Imports</button>
+    <button onclick="testParquetLoading()">Test Parquet Loading</button>
+
+    <script type="module">
+        const log = (message) => {
+            console.log(message);
+            document.getElementById('results').innerHTML += `<p>${message}</p>`;
+        };
+
+        window.testImports = async function() {
+            log('Testing imports...');
+            
+            try {
+                // Test 1: Import from Kepler.gl
+                log('Importing from @kepler.gl/processors/node_modules/@loaders.gl/parquet...');
+                const keplerModule = await import('/node_modules/@kepler.gl/processors/node_modules/@loaders.gl/parquet/dist/index.js');
+                log(`✓ Kepler module imported: ${Object.keys(keplerModule).join(', ')}`);
+                
+                // Test 2: Import core loader
+                log('Importing @loaders.gl/core...');
+                const coreModule = await import('/node_modules/@loaders.gl/core/dist/index.js');
+                log(`✓ Core module imported: ${Object.keys(coreModule).slice(0, 5).join(', ')}...`);
+                
+                // Test 3: Check ParquetLoader
+                if (keplerModule.ParquetLoader) {
+                    const loader = keplerModule.ParquetLoader;
+                    log(`✓ ParquetLoader found with properties: ${Object.getOwnPropertyNames(loader).slice(0, 10).join(', ')}`);
+                    
+                    // Check for configuration methods
+                    if (typeof loader.setOptions === 'function') {
+                        log('✓ setOptions method available');
+                    } else if (typeof loader.setWASMPath === 'function') {
+                        log('✓ setWASMPath method available');
+                    } else {
+                        log('⚠ No configuration methods found');
+                    }
+                } else {
+                    log('✗ ParquetLoader not found in module');
+                }
+                
+            } catch (error) {
+                log(`✗ Import error: ${error.message}`);
+                console.error('Full error:', error);
+            }
+        };
+
+        window.testParquetLoading = async function() {
+            log('Testing actual parquet loading...');
+            
+            try {
+                const { ParquetLoader } = await import('/node_modules/@kepler.gl/processors/node_modules/@loaders.gl/parquet/dist/index.js');
+                const { load } = await import('/node_modules/@loaders.gl/core/dist/index.js');
+                
+                log('✓ Modules imported successfully');
+                
+                // Configure WASM path
+                const wasmPath = '/static/wasm/parquet_wasm_bg.wasm';
+                const wasmCheck = await fetch(wasmPath);
+                
+                if (wasmCheck.ok) {
+                    log(`✓ WASM file accessible at ${wasmPath}`);
+                    
+                    // Try configuration (ignore if methods don't exist)
+                    try {
+                        if (ParquetLoader.setOptions) {
+                            ParquetLoader.setOptions({ parquet: { wasmUrl: wasmPath } });
+                            log('✓ Configured with setOptions');
+                        } else if (ParquetLoader.setWASMPath) {
+                            ParquetLoader.setWASMPath(wasmPath);
+                            log('✓ Configured with setWASMPath');
+                        }
+                    } catch (configError) {
+                        log(`⚠ Configuration failed: ${configError.message}`);
+                    }
+                } else {
+                    log(`⚠ WASM file not accessible: ${wasmPath}`);
+                }
+                
+                // Test loading
+                const response = await fetch('/data/coverage_table.parquet');
+                if (!response.ok) {
+                    throw new Error('Parquet file not accessible');
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                log(`✓ Parquet file fetched: ${arrayBuffer.byteLength} bytes`);
+                
+                const data = await load(arrayBuffer, ParquetLoader, {
+                    parquet: { preserveBinary: false }
+                });
+                
+                log(`✓ Parquet loaded successfully: ${data.length} rows`);
+                
+                if (data.length > 0) {
+                    const keys = Object.keys(data[0]);
+                    log(`Columns: ${keys.join(', ')}`);
+                }
+                
+            } catch (error) {
+                log(`✗ Loading error: ${error.message}`);
+                console.error('Full error:', error);
+                
+                // Try to get more details
+                if (error.stack) {
+                    log(`Stack trace: ${error.stack.split('\n')[0]}`);
+                }
+            }
+        };
+
+        // Auto-run import test
+        window.addEventListener('load', () => {
+            log('Simple ParquetLoader test loaded');
+            testImports();
+        });
+    </script>
+</body>
+</html>

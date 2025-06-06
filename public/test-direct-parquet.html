@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parquet Loader Test</title>
+</head>
+<body>
+    <h1>Parquet Loader Direct Test</h1>
+    <div id="output"></div>
+    <button onclick="testParquetLoading()">Test Parquet Loading</button>
+    
+    <script type="module">
+        async function testParquetLoading() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<p>Testing parquet loading...</p>';
+            
+            try {
+                // Import ParquetLoader from Kepler.gl's dependencies
+                console.log('Importing ParquetLoader...');
+                const { ParquetLoader } = await import('/node_modules/@kepler.gl/processors/node_modules/@loaders.gl/parquet/dist/index.js');
+                
+                console.log('ParquetLoader imported:', ParquetLoader);
+                output.innerHTML += '<p>✅ ParquetLoader imported successfully</p>';
+                
+                // Test loading a parquet file
+                console.log('Loading parquet file...');
+                const response = await fetch('/data/coverage_table.parquet');
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch parquet file: ${response.statusText}`);
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                console.log('Parquet file loaded, size:', arrayBuffer.byteLength);
+                output.innerHTML += `<p>✅ Parquet file loaded (${arrayBuffer.byteLength} bytes)</p>`;
+                
+                // Parse the parquet file
+                console.log('Parsing parquet file...');
+                const result = await ParquetLoader.parse(arrayBuffer, {});
+                
+                console.log('Parquet parsed successfully:', result);
+                output.innerHTML += '<p>✅ Parquet file parsed successfully!</p>';
+                output.innerHTML += `<pre>${JSON.stringify(result, null, 2).substring(0, 500)}...</pre>`;
+                
+            } catch (error) {
+                console.error('Error testing parquet loading:', error);
+                output.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+            }
+        }
+        
+        // Make function global
+        window.testParquetLoading = testParquetLoading;
+    </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Parquet Loading Test</title>
+</head>
+<body>
+    <h1>Parquet Loading Test</h1>
+    <button onclick="testParquetLoad()">Test Parquet Loading</button>
+    <div id="result"></div>
+    
+    <script>
+        async function testParquetLoad() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                // Try to load a parquet file directly
+                const response = await fetch('/data/coverage_table.parquet');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                const file = new File([arrayBuffer], 'test.parquet', {
+                    type: 'application/octet-stream'
+                });
+                
+                resultDiv.innerHTML = `
+                    <h3>File loaded successfully!</h3>
+                    <p>File size: ${file.size} bytes</p>
+                    <p>File type: ${file.type}</p>
+                    <p>File name: ${file.name}</p>
+                `;
+                
+                // Now try to check if Kepler.gl loaders are available
+                if (window.loaders && window.loaders.registerLoaders) {
+                    resultDiv.innerHTML += '<p>Kepler.gl loaders are available</p>';
+                } else {
+                    resultDiv.innerHTML += '<p>Kepler.gl loaders are NOT available</p>';
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>Error occurred:</h3>
+                    <p style="color: red;">${error.message}</p>
+                    <pre>${error.stack}</pre>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

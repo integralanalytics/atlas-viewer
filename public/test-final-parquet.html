@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Final Parquet Integration Test</title>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
+        .success { color: #00a854; font-weight: bold; }
+        .error { color: #d73527; font-weight: bold; }
+        .warning { color: #fa8c16; font-weight: bold; }
+        button { margin: 5px; padding: 10px 15px; background: #1890ff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #40a9ff; }
+        .log { background: #f0f0f0; padding: 10px; border-radius: 4px; margin: 10px 0; font-family: monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>Final Parquet Integration Test</h1>
+    <p>This test verifies that the ParquetLoader WASM configuration is working correctly.</p>
+    
+    <div class="test-section">
+        <h2>Step 1: WASM File Verification</h2>
+        <button onclick="testWasmFile()">Test WASM File Access</button>
+        <div id="wasm-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Step 2: ParquetLoader Configuration</h2>
+        <button onclick="testLoaderConfig()">Test Loader Configuration</button>
+        <div id="config-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Step 3: End-to-End Parquet Loading</h2>
+        <button onclick="testParquetFile()">Test Parquet File Loading</button>
+        <div id="loading-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Step 4: Kepler.gl Integration</h2>
+        <button onclick="testKeplerIntegration()">Test Kepler.gl Integration</button>
+        <div id="kepler-results"></div>
+    </div>
+
+    <script type="module">
+        const log = (containerId, message, type = 'info') => {
+            const container = document.getElementById(containerId);
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : '';
+            const timestamp = new Date().toLocaleTimeString();
+            container.innerHTML += `<div class="log"><span class="${className}">[${timestamp}] ${message}</span></div>`;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        };
+
+        window.testWasmFile = async function() {
+            const containerId = 'wasm-results';
+            log(containerId, 'Testing WASM file accessibility...');
+            
+            try {
+                const wasmPath = '/static/wasm/parquet_wasm_bg.wasm';
+                const response = await fetch(wasmPath);
+                
+                if (response.ok) {
+                    const contentLength = response.headers.get('content-length');
+                    const contentType = response.headers.get('content-type');
+                    log(containerId, `✓ WASM file accessible: ${wasmPath}`, 'success');
+                    log(containerId, `  Size: ${contentLength} bytes, Type: ${contentType}`);
+                    return true;
+                } else {
+                    log(containerId, `✗ WASM file not accessible: ${response.status} ${response.statusText}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                log(containerId, `✗ WASM file test error: ${error.message}`, 'error');
+                return false;
+            }
+        };
+
+        window.testLoaderConfig = async function() {
+            const containerId = 'config-results';
+            log(containerId, 'Testing ParquetLoader configuration...');
+            
+            try {
+                const { ParquetLoader } = await import('/node_modules/@kepler.gl/processors/node_modules/@loaders.gl/parquet/dist/index.js');
+                log(containerId, '✓ ParquetLoader imported successfully', 'success');
+                
+                // Check if configuration methods exist
+                const hasSetWASMPath = typeof ParquetLoader.setWASMPath === 'function';
+                const hasSetOptions = typeof ParquetLoader.setOptions === 'function';
+                
+                log(containerId, `  setWASMPath available: ${hasSetWASMPath}`);
+                log(containerId, `  setOptions available: ${hasSetOptions}`);
+                
+                if (hasSetWASMPath || hasSetOptions) {
+                    log(containerId, '✓ Configuration methods available', 'success');
+                    
+                    // Test configuration
+                    const wasmPath = '/static/wasm/parquet_wasm_bg.wasm';
+                    if (hasSetWASMPath) {
+                        ParquetLoader.setWASMPath(wasmPath);
+                        log(containerId, '✓ ParquetLoader.setWASMPath() called', 'success');
+                    } else if (hasSetOptions) {
+                        ParquetLoader.setOptions({ parquet: { wasmUrl: wasmPath } });
+                        log(containerId, '✓ ParquetLoader.setOptions() called', 'success');
+                    }
+                    
+                    return true;
+                } else {
+                    log(containerId, '⚠ No configuration methods found', 'warning');
+                    return false;
+                }
+            } catch (error) {
+                log(containerId, `✗ Loader configuration error: ${error.message}`, 'error');
+                return false;
+            }
+        };
+
+        window.testParquetFile = async function() {
+            const containerId = 'loading-results';
+            log(containerId, 'Testing parquet file loading...');
+            
+            try {
+                const { ParquetLoader } = await import('/node_modules/@kepler.gl/processors/node_modules/@loaders.gl/parquet/dist/index.js');
+                const { load } = await import('/node_modules/@loaders.gl/core/dist/index.js');
+                
+                log(containerId, '✓ Loaders imported', 'success');
+                
+                // Fetch parquet file
+                const response = await fetch('/data/coverage_table.parquet');
+                if (!response.ok) {
+                    throw new Error(`Parquet file not accessible: ${response.status}`);
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                log(containerId, `✓ Parquet file fetched: ${arrayBuffer.byteLength} bytes`, 'success');
+                
+                // Load parquet data
+                const data = await load(arrayBuffer, ParquetLoader, {
+                    parquet: { preserveBinary: false }
+                });
+                
+                log(containerId, `✓ Parquet loading successful: ${data.length} rows`, 'success');
+                
+                if (data.length > 0) {
+                    const sampleRow = data[0];
+                    const columns = Object.keys(sampleRow);
+                    log(containerId, `  Columns (${columns.length}): ${columns.slice(0, 5).join(', ')}${columns.length > 5 ? '...' : ''}`);
+                }
+                
+                return true;
+            } catch (error) {
+                log(containerId, `✗ Parquet loading error: ${error.message}`, 'error');
+                console.error('Full error:', error);
+                return false;
+            }
+        };
+
+        window.testKeplerIntegration = async function() {
+            const containerId = 'kepler-results';
+            log(containerId, 'Testing Kepler.gl integration...');
+            
+            try {
+                const { processDatasets } = await import('/node_modules/@kepler.gl/processors/dist/esm/index.js');
+                log(containerId, '✓ Kepler.gl processors imported', 'success');
+                
+                // Create test file
+                const response = await fetch('/data/coverage_table.parquet');
+                if (!response.ok) {
+                    throw new Error('Test file not accessible');
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                const file = new File([arrayBuffer], 'test.parquet', {
+                    type: 'application/octet-stream'
+                });
+                
+                log(containerId, `✓ Test file created: ${file.size} bytes`, 'success');
+                
+                // Process with Kepler.gl
+                const datasets = await processDatasets([{
+                    info: { id: 'test', label: 'Test Parquet Dataset' },
+                    data: file
+                }]);
+                
+                log(containerId, `✓ Kepler.gl processing successful: ${datasets.length} dataset(s)`, 'success');
+                
+                if (datasets.length > 0) {
+                    const dataset = datasets[0];
+                    const rowCount = dataset.data?.length || 0;
+                    const fieldCount = dataset.info?.fields?.length || 0;
+                    log(containerId, `  Dataset: ${rowCount} rows, ${fieldCount} fields`, 'success');
+                    
+                    if (fieldCount > 0) {
+                        const fieldNames = dataset.info.fields.slice(0, 5).map(f => f.name).join(', ');
+                        log(containerId, `  Fields: ${fieldNames}${dataset.info.fields.length > 5 ? '...' : ''}`);
+                    }
+                }
+                
+                return true;
+            } catch (error) {
+                log(containerId, `✗ Kepler.gl integration error: ${error.message}`, 'error');
+                console.error('Full error:', error);
+                return false;
+            }
+        };
+
+        // Auto-run first test
+        window.addEventListener('load', () => {
+            console.log('Final Parquet Integration Test loaded');
+            testWasmFile();
+        });
+    </script>
+</body>
+</html>

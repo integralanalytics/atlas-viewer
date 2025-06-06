@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WASM Debug Test</title>
+</head>
+<body>
+    <h1>WASM Loading Debug</h1>
+    <button onclick="debugWasm()">Debug WASM Loading</button>
+    <div id="result"></div>
+    
+    <script>
+        async function debugWasm() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Debugging WASM loading...';
+            
+            try {
+                // Check if WebAssembly is supported
+                if (typeof WebAssembly === 'undefined') {
+                    resultDiv.innerHTML = '<p style="color: red;">WebAssembly is not supported in this browser</p>';
+                    return;
+                }
+                
+                // Try to find the WASM file
+                const wasmFiles = [
+                    '/7f52ab37fe2e6735071c.wasm',
+                    '/parquet_wasm_bg.wasm',
+                    '/static/js/7f52ab37fe2e6735071c.wasm'
+                ];
+                
+                let wasmFound = false;
+                for (const wasmFile of wasmFiles) {
+                    try {
+                        const response = await fetch(wasmFile);
+                        if (response.ok) {
+                            resultDiv.innerHTML += `<p style="color: green;">✅ Found WASM file: ${wasmFile}</p>`;
+                            wasmFound = true;
+                            
+                            // Try to load the WASM
+                            const wasmBytes = await response.arrayBuffer();
+                            resultDiv.innerHTML += `<p>WASM file size: ${wasmBytes.byteLength} bytes</p>`;
+                            
+                            // Try to instantiate
+                            const wasmModule = await WebAssembly.instantiate(wasmBytes);
+                            resultDiv.innerHTML += `<p style="color: green;">✅ WASM module instantiated successfully</p>`;
+                            resultDiv.innerHTML += `<p>Exports: ${Object.keys(wasmModule.instance.exports).slice(0, 10).join(', ')}...</p>`;
+                            
+                            // Check for parquet-specific exports
+                            const exports = wasmModule.instance.exports;
+                            if (exports.parquetfile_fromFile) {
+                                resultDiv.innerHTML += `<p style="color: green;">✅ parquetfile_fromFile function found</p>`;
+                            } else {
+                                resultDiv.innerHTML += `<p style="color: red;">❌ parquetfile_fromFile function NOT found</p>`;
+                                resultDiv.innerHTML += `<p>Available exports: ${Object.keys(exports).join(', ')}</p>`;
+                            }
+                            break;
+                        }
+                    } catch (e) {
+                        resultDiv.innerHTML += `<p style="color: orange;">⚠️ Could not load ${wasmFile}: ${e.message}</p>`;
+                    }
+                }
+                
+                if (!wasmFound) {
+                    resultDiv.innerHTML += '<p style="color: red;">❌ No WASM files found</p>';
+                }
+                
+                // Check global objects
+                resultDiv.innerHTML += '<h3>Global Objects Check:</h3>';
+                if (window.parquet_wasm) {
+                    resultDiv.innerHTML += '<p style="color: green;">✅ window.parquet_wasm exists</p>';
+                } else {
+                    resultDiv.innerHTML += '<p style="color: red;">❌ window.parquet_wasm not found</p>';
+                }
+                
+                if (window.__wbg_parquetfile_fromFile) {
+                    resultDiv.innerHTML += '<p style="color: green;">✅ window.__wbg_parquetfile_fromFile exists</p>';
+                } else {
+                    resultDiv.innerHTML += '<p style="color: red;">❌ window.__wbg_parquetfile_fromFile not found</p>';
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML += `
+                    <h3>Error occurred:</h3>
+                    <p style="color: red;">${error.message}</p>
+                    <pre>${error.stack}</pre>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

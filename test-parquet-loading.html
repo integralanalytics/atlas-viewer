@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Parquet Loading</title>
+</head>
+<body>
+    <h1>Parquet Loading Test</h1>
+    <div id="output"></div>
+    
+    <script>
+        // Test if we can load parquet files using our fixes
+        async function testParquetLoading() {
+            const output = document.getElementById('output');
+            
+            try {
+                // Test fetching the parquet file
+                const response = await fetch('/data/coverage_table.parquet');
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch: ${response.status}`);
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                output.innerHTML += `<p>✅ Successfully fetched parquet file (${arrayBuffer.byteLength} bytes)</p>`;
+                
+                // Test basic ArrayBuffer access
+                const view = new Uint8Array(arrayBuffer.slice(0, 4));
+                const signature = Array.from(view).map(b => String.fromCharCode(b)).join('');
+                output.innerHTML += `<p>File signature: ${signature}</p>`;
+                
+                if (signature === 'PAR1') {
+                    output.innerHTML += `<p>✅ Valid Parquet file detected</p>`;
+                } else {
+                    output.innerHTML += `<p>❌ Invalid Parquet signature</p>`;
+                }
+                
+            } catch (error) {
+                output.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+            }
+        }
+        
+        // Run test when page loads
+        window.addEventListener('load', testParquetLoading);
+    </script>
+</body>
+</html>

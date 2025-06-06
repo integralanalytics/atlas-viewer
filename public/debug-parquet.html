@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parquet WASM Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        #log { background: #f8f9fa; padding: 10px; border: 1px solid #dee2e6; max-height: 400px; overflow-y: auto; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>Parquet WASM Debug Tool</h1>
+    
+    <div id="results"></div>
+    
+    <button onclick="testWasmFiles()">Test WASM File Access</button>
+    <button onclick="testWasmLoading()">Test WASM Loading</button>
+    <button onclick="testParquetLoading()">Test Parquet Loading</button>
+    <button onclick="clearLog()">Clear Log</button>
+    
+    <h3>Debug Log:</h3>
+    <div id="log"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div class="${type}">[${time}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type}] ${message}`);
+        }
+
+        function addResult(message, success) {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${success ? 'success' : 'error'}`;
+            div.textContent = message;
+            resultsDiv.appendChild(div);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testWasmFiles() {
+            log('Testing WASM file accessibility...');
+            
+            const wasmFiles = [
+                '/parquet_wasm_bg.wasm',
+                '/parquet_wasm_esm_bg.wasm',
+                '/static/wasm/parquet_wasm_bg.wasm',
+                '/static/wasm/kepler_parquet_wasm_bg.wasm'
+            ];
+            
+            for (const file of wasmFiles) {
+                try {
+                    const response = await fetch(file);
+                    if (response.ok) {
+                        log(`✓ ${file} - OK (${response.headers.get('content-length')} bytes)`, 'success');
+                        addResult(`${file} accessible`, true);
+                    } else {
+                        log(`✗ ${file} - ${response.status} ${response.statusText}`, 'error');
+                        addResult(`${file} not accessible`, false);
+                    }
+                } catch (error) {
+                    log(`✗ ${file} - Error: ${error.message}`, 'error');
+                    addResult(`${file} failed to load`, false);
+                }
+            }
+        }
+
+        async function testWasmLoading() {
+            log('Testing WASM module loading...');
+            
+            const jsFiles = [
+                '/parquet_wasm_esm.js',
+                '/static/wasm/parquet_wasm.js'
+            ];
+            
+            for (const jsFile of jsFiles) {
+                try {
+                    log(`Attempting to load ${jsFile}...`);
+                    
+                    // Dynamic import approach
+                    try {
+                        const wasmModule = await import(jsFile);
+                        log(`✓ ${jsFile} loaded via import`, 'success');
+                        addResult(`${jsFile} import successful`, true);
+                        
+                        // Check what functions are available
+                        log(`Available functions: ${Object.keys(wasmModule).join(', ')}`);
+                        
+                    } catch (importError) {
+                        log(`Import failed for ${jsFile}: ${importError.message}`, 'error');
+                        
+                        // Try script tag approach
+                        const script = document.createElement('script');
+                        script.src = jsFile;
+                        script.type = 'module';
+                        
+                        await new Promise((resolve, reject) => {
+                            script.onload = () => {
+                                log(`✓ ${jsFile} loaded via script tag`, 'success');
+                                addResult(`${jsFile} script load successful`, true);
+                                resolve();
+                            };
+                            script.onerror = () => {
+                                log(`✗ ${jsFile} failed to load via script tag`, 'error');
+                                addResult(`${jsFile} script load failed`, false);
+                                reject(new Error('Script load failed'));
+                            };
+                            document.head.appendChild(script);
+                        });
+                    }
+                    
+                } catch (error) {
+                    log(`✗ ${jsFile} - Error: ${error.message}`, 'error');
+                    addResult(`${jsFile} loading failed`, false);
+                }
+            }
+        }
+
+        async function testParquetLoading() {
+            log('Testing Parquet file loading...');
+            
+            const parquetFiles = [
+                '/data/coverage_table.parquet',
+                '/data/features.parquet',
+                '/data/entities_analysis.geoparquet'
+            ];
+            
+            for (const file of parquetFiles) {
+                try {
+                    const response = await fetch(file);
+                    if (response.ok) {
+                        const arrayBuffer = await response.arrayBuffer();
+                        log(`✓ ${file} - Loaded (${arrayBuffer.byteLength} bytes)`, 'success');
+                        addResult(`${file} loaded successfully`, true);
+                        
+                        // Try to check if it's a valid Parquet file (simple check)
+                        const view = new Uint8Array(arrayBuffer);
+                        const header = String.fromCharCode(...view.slice(0, 4));
+                        log(`File header: ${header}`);
+                        
+                    } else {
+                        log(`✗ ${file} - ${response.status} ${response.statusText}`, 'error');
+                        addResult(`${file} not accessible`, false);
+                    }
+                } catch (error) {
+                    log(`✗ ${file} - Error: ${error.message}`, 'error');
+                    addResult(`${file} failed to load`, false);
+                }
+            }
+        }
+
+        // Initialize on page load
+        window.onload = () => {
+            log('Debug tool initialized');
+            log('Click buttons above to run tests');
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Parquet Test</title>
+</head>
+<body>
+    <h1>Simple Parquet Loading Test</h1>
+    <div id="output"></div>
+    <button onclick="testSimpleParquet()">Test Simple Parquet</button>
+    
+    <script type="module">
+        async function testSimpleParquet() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<p>Starting simple parquet test...</p>';
+            
+            try {
+                // Try to load parquet data using browser fetch
+                console.log('Fetching parquet file...');
+                const response = await fetch('/data/coverage_table.parquet');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                output.innerHTML += `<p>✅ File loaded: ${arrayBuffer.byteLength} bytes</p>`;
+                
+                // Check the first few bytes to confirm it's a parquet file
+                const header = new Uint8Array(arrayBuffer.slice(0, 4));
+                const headerString = Array.from(header).map(b => String.fromCharCode(b)).join('');
+                
+                if (headerString === 'PAR1') {
+                    output.innerHTML += '<p>✅ Valid Parquet file detected (PAR1 header)</p>';
+                } else {
+                    output.innerHTML += `<p>⚠️ Unexpected header: ${headerString}</p>`;
+                }
+                
+                // Try to load the loaders.gl parquet module
+                console.log('Loading @loaders.gl/parquet...');
+                const module = await import('/node_modules/@kepler.gl/processors/node_modules/@loaders.gl/parquet/dist/index.js');
+                output.innerHTML += '<p>✅ @loaders.gl/parquet module loaded</p>';
+                
+                console.log('Available exports:', Object.keys(module));
+                output.innerHTML += `<p>Available exports: ${Object.keys(module).join(', ')}</p>`;
+                
+                // Try parsing with ParquetLoader
+                if (module.ParquetLoader) {
+                    console.log('Using ParquetLoader...');
+                    output.innerHTML += '<p>Attempting to parse with ParquetLoader...</p>';
+                    
+                    try {
+                        const result = await module.ParquetLoader.parse(arrayBuffer, {
+                            parquet: {
+                                shape: 'object-row-table'
+                            }
+                        });
+                        
+                        output.innerHTML += '<p>✅ ParquetLoader parsing successful!</p>';
+                        output.innerHTML += `<p>Shape: ${result.shape}</p>`;
+                        output.innerHTML += `<p>Schema fields: ${result.schema?.fields?.length || 'unknown'}</p>`;
+                        output.innerHTML += `<p>Data rows: ${result.data?.length || 'unknown'}</p>`;
+                        
+                        if (result.data && result.data.length > 0) {
+                            output.innerHTML += `<p>Sample data: <pre>${JSON.stringify(result.data[0], null, 2)}</pre></p>`;
+                        }
+                        
+                    } catch (parseError) {
+                        console.error('ParquetLoader parse error:', parseError);
+                        output.innerHTML += `<p>❌ ParquetLoader parse error: ${parseError.message}</p>`;
+                        output.innerHTML += `<p>Error stack: <pre>${parseError.stack}</pre></p>`;
+                    }
+                } else {
+                    output.innerHTML += '<p>❌ ParquetLoader not found in module</p>';
+                }
+                
+            } catch (error) {
+                console.error('Test error:', error);
+                output.innerHTML += `<p>❌ Test error: ${error.message}</p>`;
+                output.innerHTML += `<p>Error stack: <pre>${error.stack}</pre></p>`;
+            }
+        }
+        
+        window.testSimpleParquet = testSimpleParquet;
+    </script>
+</body>
+</html>
