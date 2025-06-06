@@ -4,7 +4,7 @@ import { createStore, applyMiddleware, combineReducers } from 'redux';
 import { thunk } from 'redux-thunk';
 
 // Kepler.gl imports - use scoped packages
-import KeplerGl from '@kepler.gl/components';
+import KeplerGl, { injectComponents, PanelHeaderFactory } from '@kepler.gl/components';
 import keplerGlReducer from '@kepler.gl/reducers';
 
 // Import task middleware from react-palm for file processing
@@ -13,10 +13,14 @@ import { taskMiddleware } from 'react-palm/tasks';
 // Theme and components
 import { integralAnalyticsTheme } from './theme';
 import CustomSidePanelHeader from './components/CustomSidePanelHeader';
+import CustomPanelHeaderFactory from './components/CustomPanelHeaderFactory';
 import LoadingScreen from './components/LoadingScreen';
 
 // Loaders.gl registration for Kepler.gl file import support
 import { configureLoaders } from './utils/keplerLoaderConfig';
+
+// Import the new add-data-button.css file
+import './add-data-button.css';
 
 // We'll configure loaders asynchronously in useEffect
 let configuredLoaders = null;
@@ -40,10 +44,13 @@ store.subscribe(() => {
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [readyToEnter, setReadyToEnter] = useState(false);
+
   // Initialize the app with loading screen
   useEffect(() => {
     const initializeApp = async () => {
-      try {        // Configure loaders first (async operation)
+      try {
+        // Configure loaders first (async operation)
         console.log('Configuring Kepler.gl loaders...');
         configuredLoaders = await configureLoaders();
         
@@ -64,8 +71,7 @@ function App() {
           console.error('Global error during file loading:', event.error);
         });
         
-        // App is ready - no automatic data loading
-        setIsLoading(false);
+        setReadyToEnter(true); // Show Enter Map button
       } catch (err) {
         console.error('Failed to initialize app:', err);
         setError(err.message);
@@ -75,6 +81,10 @@ function App() {
 
     initializeApp();
   }, []);
+
+  const handleEnterMap = () => {
+    setIsLoading(false);
+  };
 
   const keplerGlConfig = useMemo(() => ({
     version: 'v1',
@@ -121,7 +131,7 @@ function App() {
   }), []);
 
   if (isLoading) {
-    return <LoadingScreen />;
+    return <LoadingScreen onComplete={readyToEnter ? handleEnterMap : undefined} />;
   }
 
   if (error) {
@@ -154,9 +164,14 @@ function App() {
       </div>
     );
   }
+  // Inject custom components to replace the default Kepler.gl header
+  const CustomKeplerGl = injectComponents([
+    [PanelHeaderFactory, CustomPanelHeaderFactory]
+  ]);
   return (
     <Provider store={store}>
-      <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>        <KeplerGl
+      <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+        <CustomKeplerGl
           id="atlas-viewer"
           mapboxApiAccessToken={process.env.REACT_APP_MAPBOX_TOKEN || ''}
           width={window.innerWidth}
@@ -167,7 +182,6 @@ function App() {
             activeSidePanel: 'layer',
             currentModal: null
           }}
-          sidePanelHeader={() => <CustomSidePanelHeader />}
         />
       </div>
     </Provider>

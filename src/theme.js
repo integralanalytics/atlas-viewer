@@ -44,7 +44,8 @@ export const integralAnalyticsTheme = {
 
   // Button Colors
   buttonBgd: colors.primaryBrightBlue,
-  buttonColor: colors.bgLight,
+  buttonColor: '#FFFFFF', // Ensure pure white for best contrast
+  buttonFontWeight: 'bold', // Make button text bold for better readability
   buttonBgdHover: colors.primaryDeepBlue,
   buttonBgdActive: colors.primaryDeepBlue,
 

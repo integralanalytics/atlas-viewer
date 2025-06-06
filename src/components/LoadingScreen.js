@@ -117,6 +117,7 @@ const ProgressFill = styled.div`
 const LoadingScreen = ({ onComplete }) => {
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState('Initializing Atlas Viewer...');
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const steps = [
@@ -149,9 +150,8 @@ const LoadingScreen = ({ onComplete }) => {
             if (currentStepIndex < steps.length) {
               setTimeout(updateProgress, 100);
             } else {
-              setTimeout(() => {
-                if (onComplete) onComplete();
-              }, 300);
+              setProgress(100); // Ensure 100% on finish
+              setReady(true); // Show button when ready
             }
           }
           setProgress(Math.min(currentProgress, 100));
@@ -166,9 +166,8 @@ const LoadingScreen = ({ onComplete }) => {
           if (currentStepIndex < steps.length) {
             setTimeout(updateProgress, 100);
           } else {
-            setTimeout(() => {
-              if (onComplete) onComplete();
-            }, 300);
+            setProgress(100); // Ensure 100% on finish
+            setReady(true); // Show button when ready
           }
         }, step.duration);
       }
@@ -221,6 +220,36 @@ const LoadingScreen = ({ onComplete }) => {
           {Math.round(progress)}%
         </div>
       </ProgressContainer>
+      
+      {ready && (
+        <button
+          style={{
+            marginTop: '2.5rem',
+            padding: '12px 32px',
+            background: '#fff',
+            color: '#339AF0',
+            border: 'none',
+            borderRadius: '4px',
+            fontSize: '1.1rem',
+            fontWeight: 500,
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            transition: 'background 0.2s, color 0.2s, transform 0.1s',
+            outline: 'none',
+            active: {
+              background: '#e6e6e6',
+              color: '#1976d2',
+              transform: 'translateY(2px) scale(0.98)'
+            }
+          }}
+          onMouseDown={e => e.currentTarget.style.transform = 'translateY(2px) scale(0.98)'}
+          onMouseUp={e => e.currentTarget.style.transform = ''}
+          onMouseLeave={e => e.currentTarget.style.transform = ''}
+          onClick={onComplete}
+        >
+          Enter Map
+        </button>
+      )}
     </LoadingContainer>
   );
 };
