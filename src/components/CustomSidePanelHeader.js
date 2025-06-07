@@ -49,7 +49,7 @@ const CustomSidePanelHeader = ({ theme = {} }) => {
     <HeaderContainer theme={theme}>
       <LogoContainer>
         <Logo 
-          src="/assets/integral-analytics-logo.png" 
+          src={`${process.env.PUBLIC_URL || ''}/assets/integral-analytics-logo.png`}
           alt="Integral Analytics"
           onError={(e) => {
             e.target.style.display = 'none';

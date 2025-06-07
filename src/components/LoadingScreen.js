@@ -171,7 +171,7 @@ const LoadingScreen = ({ onComplete }) => {
     <LoadingContainer>
       <LogoContainer>
         <Logo 
-          src="/assets/integral-analytics-logo.png" 
+          src={`${process.env.PUBLIC_URL || ''}/assets/integral-analytics-logo.png`}
           alt="Integral Analytics"
           onError={(e) => {
             // If logo fails to load, hide it gracefully

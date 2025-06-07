@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { colors } from '../colors.js';
 
-const customLogoPath = '/assets/integral-analytics-logo.png';
+const customLogoPath = `${process.env.PUBLIC_URL || ''}/assets/integral-analytics-logo.png`;
 
 const CustomHeaderContainer = styled.div`
   background-color: ${colors.bgDarkerGray};
