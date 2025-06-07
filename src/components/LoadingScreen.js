@@ -123,9 +123,9 @@ const LoadingScreen = ({ onComplete }) => {
     const steps = [
       { text: 'Initializing Atlas Viewer...', duration: 500 },
       { text: 'Loading Kepler.gl components...', duration: 500 },
-      { text: 'Applying theme...', duration: 500 },
-      { text: 'Setting up data processors...', duration: 500 },
-      { text: 'Ready to explore data!', duration: 500 }
+      { text: 'Applying theme...', duration: 400 },
+      { text: 'Setting up data processors...', duration: 300 },
+      { text: 'Ready to explore data!', duration: 200 }
     ];
 
     let stepIndex = 0;
@@ -150,7 +150,8 @@ const LoadingScreen = ({ onComplete }) => {
             setTimeout(() => runStep(nextProgress), 100);
           }
         };
-        animate();        } else {
+        animate();
+        } else {
           setProgress(100);
           // Wait a bit after reaching 100% before showing the button
           setTimeout(() => {

@@ -59,7 +59,7 @@ let mapboxUserStyleId = process.env.REACT_APP_MAPBOX_USER_STYLE_ID || '';
 const mapboxToken = process.env.REACT_APP_MAPBOX_TOKEN || '';
 const staticImageUrl = mapboxUserStyleId && mapboxToken
   ? `https://api.mapbox.com/styles/v1/${mapboxUserStyleId}/static/-84.5120,39.1031,9/128x128?access_token=${mapboxToken}`
-  : '/assets/integral-analytics-logo.png';
+  : `${process.env.PUBLIC_URL || ''}/assets/integral-analytics-logo.png`;
 
 console.log('DEBUG: staticImageUrl for Atlas Dark:', staticImageUrl);
 
