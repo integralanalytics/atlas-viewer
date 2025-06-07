@@ -67,7 +67,7 @@ const customMapStyles = [
   {
     id: 'atlas_dark',
     label: 'Atlas Dark',
-    url: process.env.REACT_APP_MAPBOX_STYLE_URL || '',
+    url: process.env.REACT_APP_MAPBOX_STYLE_URL || 'mapbox://styles/mapbox/dark-v10', // Fallback to Mapbox dark style if env var is missing
     icon: staticImageUrl
   }
 ];
