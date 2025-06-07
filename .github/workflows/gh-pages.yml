@@ -8,6 +8,14 @@ on:
 permissions:
   contents: write
 
+env:
+  REACT_APP_MAPBOX_TOKEN: ${{ secrets.REACT_APP_MAPBOX_TOKEN }}
+  REACT_APP_NAME: "Atlas Viewer"
+  REACT_APP_VERSION: "1.0.0"
+  REACT_APP_THEME: "dark"
+  REACT_APP_LOGO_PATH: "%PUBLIC_URL%/assets/integral-analytics-logo.png"
+  REACT_APP_DEBUG: "false"
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
