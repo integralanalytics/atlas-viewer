@@ -61,11 +61,6 @@ const staticImageUrl = mapboxUserStyleId && mapboxToken
   ? `https://api.mapbox.com/styles/v1/${mapboxUserStyleId}/static/-84.5120,39.1031,9/128x128?access_token=${mapboxToken}`
   : `${process.env.PUBLIC_URL || ''}/assets/integral-analytics-logo.png`;
 
-console.log('DEBUG: staticImageUrl for Atlas Dark:', staticImageUrl);
-console.log('DEBUG: process.env.REACT_APP_MAPBOX_STYLE_URL', process.env.REACT_APP_MAPBOX_STYLE_URL);
-console.log('DEBUG: process.env.REACT_APP_MAPBOX_USER_STYLE_ID', process.env.REACT_APP_MAPBOX_USER_STYLE_ID);
-console.log('DEBUG: process.env.REACT_APP_MAPBOX_TOKEN', process.env.REACT_APP_MAPBOX_TOKEN);
-
 const customMapStyles = [
   {
     id: 'atlas_dark',
