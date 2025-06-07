@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Provider } from 'react-redux';
 import { createStore, applyMiddleware, combineReducers } from 'redux';
 import { thunk } from 'redux-thunk';
@@ -6,6 +6,7 @@ import { thunk } from 'redux-thunk';
 // Kepler.gl imports - use scoped packages
 import KeplerGl, { injectComponents, PanelHeaderFactory } from '@kepler.gl/components';
 import keplerGlReducer from '@kepler.gl/reducers';
+import { wrapTo } from '@kepler.gl/actions';
 
 // Import task middleware from react-palm for file processing
 import { taskMiddleware } from 'react-palm/tasks';
@@ -25,9 +26,24 @@ import './add-data-button.css';
 // We'll configure loaders asynchronously in useEffect
 let configuredLoaders = null;
 
-// Create Redux store
+// Create Redux store with initial state that sets Atlas Dark as default
+const customizedKeplerGlReducer = keplerGlReducer.initialState({
+  mapStyle: {
+    styleType: 'atlas_dark' // Only set the default styleType
+  },
+  mapState: {
+    bearing: 0,
+    dragRotate: false,
+    latitude: 39.1031, // Cincinnati, OH latitude
+    longitude: -84.5120, // Cincinnati, OH longitude
+    pitch: 0,
+    zoom: 9,
+    isSplit: false
+  }
+});
+
 const reducers = combineReducers({
-  keplerGl: keplerGlReducer
+  keplerGl: customizedKeplerGlReducer
 });
 
 const store = createStore(
@@ -37,6 +53,24 @@ const store = createStore(
 );
 
 // Debug: Monitor file loading specifically
+
+// Define the custom map styles array outside component to avoid dependency issues
+let mapboxUserStyleId = process.env.REACT_APP_MAPBOX_USER_STYLE_ID || '';
+const mapboxToken = process.env.REACT_APP_MAPBOX_TOKEN || '';
+const staticImageUrl = mapboxUserStyleId && mapboxToken
+  ? `https://api.mapbox.com/styles/v1/${mapboxUserStyleId}/static/-84.5120,39.1031,9/128x128?access_token=${mapboxToken}`
+  : '/assets/integral-analytics-logo.png';
+
+console.log('DEBUG: staticImageUrl for Atlas Dark:', staticImageUrl);
+
+const customMapStyles = [
+  {
+    id: 'atlas_dark',
+    label: 'Atlas Dark',
+    url: process.env.REACT_APP_MAPBOX_STYLE_URL || '',
+    icon: staticImageUrl
+  }
+];
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -70,7 +104,6 @@ function App() {
         window.addEventListener('error', event => {
           console.error('Global error during file loading:', event.error);
         });
-        
         setReadyToEnter(true); // Show Enter Map button
       } catch (err) {
         console.error('Failed to initialize app:', err);
@@ -81,54 +114,9 @@ function App() {
 
     initializeApp();
   }, []);
-
   const handleEnterMap = () => {
     setIsLoading(false);
   };
-
-  const keplerGlConfig = useMemo(() => ({
-    version: 'v1',
-    config: {
-      visState: {
-        filters: [],
-        layers: [],
-        interactionConfig: {
-          tooltip: {
-            fieldsToShow: {},
-            enabled: true
-          },
-          brush: {
-            size: 0.5,
-            enabled: false
-          }
-        }
-      },
-      mapState: {
-        bearing: 0,
-        dragRotate: false,
-        latitude: 37.7749,
-        longitude: -122.4194,
-        pitch: 0,
-        zoom: 9,
-        isSplit: false
-      },
-      mapStyle: {
-        styleType: 'dark',
-        topLayerGroups: {},
-        visibleLayerGroups: {
-          label: true,
-          road: true,
-          border: false,
-          building: true,
-          water: true,
-          land: true,
-          '3d building': false
-        },
-        threeDBuildingColor: [9.665468314072013, 17.18305478057247, 31.1442867897876],
-        mapStyles: {}
-      }
-    }
-  }), []);
 
   if (isLoading) {
     return <LoadingScreen onComplete={readyToEnter ? handleEnterMap : undefined} />;
@@ -178,10 +166,8 @@ function App() {
           height={window.innerHeight}
           theme={integralAnalyticsTheme}
           cloudProviders={[]}
-          uiState={{
-            activeSidePanel: 'layer',
-            currentModal: null
-          }}
+          mapStyles={customMapStyles} // Add custom style alongside defaults
+          mapStylesReplaceDefault={false} // Keep default styles
         />
       </div>
     </Provider>
