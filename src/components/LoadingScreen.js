@@ -121,11 +121,11 @@ const LoadingScreen = ({ onComplete }) => {
 
   useEffect(() => {
     const steps = [
-      { text: 'Initializing Atlas Viewer...', duration: 500 },
-      { text: 'Loading Kepler.gl components...', duration: 500 },
-      { text: 'Applying theme...', duration: 400 },
-      { text: 'Setting up data processors...', duration: 300 },
-      { text: 'Ready to explore data!', duration: 200 }
+      { text: 'Initializing Atlas Viewer...', duration: 300 },
+      { text: 'Loading Kepler.gl components...', duration: 300 },
+      { text: 'Applying theme...', duration: 200 },
+      { text: 'Setting up data processors...', duration: 200 },
+      { text: 'Ready to explore data!', duration: 100 }
     ];
 
     let stepIndex = 0;
